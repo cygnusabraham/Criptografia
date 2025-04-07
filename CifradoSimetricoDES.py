@@ -1,6 +1,9 @@
+from Crypto.Cipher import DES
+from Crypto.Random import get_random_bytes
 import random
+import binascii
 
-# Crear un diccionario con letras del alfabeto y sus posibles sustituciones
+# Crear un diccionario con letras del alfabeto y sus posibles sustituciones (homofónicas)
 alfabeto = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 sustituciones = {
     'A': ['F', 'J', 'M', 'P'],
@@ -31,8 +34,23 @@ sustituciones = {
     'Z': ['U', 'L']
 }
 
-# Función de cifrado por sustitución homofónica
-def cifrar(texto):
+
+# Función de cifrado DES
+def cifrado_des(texto, clave):
+    # Asegurarse de que el texto es un múltiplo de 8 caracteres
+    while len(texto) % 8 != 0:
+        texto += ' '  # Rellenar con espacios si es necesario
+
+    # Crear el cifrador DES con la clave proporcionada
+    cipher = DES.new(clave, DES.MODE_ECB)
+
+    # Cifrar el texto
+    texto_cifrado = cipher.encrypt(texto.encode('utf-8'))
+    return binascii.hexlify(texto_cifrado).decode('utf-8')
+
+
+# Función de sustitución homofónica
+def sustitucion_homofonica(texto):
     texto = texto.upper()
     texto_cifrado = []
     for char in texto:
@@ -43,27 +61,40 @@ def cifrar(texto):
             texto_cifrado.append(char)  # Dejar los caracteres no alfabéticos sin cambios
     return ''.join(texto_cifrado)
 
-# Función de descifrado (solo para un descifrado simple)
-def descifrar(texto_cifrado):
-    # Invertir el diccionario para la búsqueda de los caracteres originales
-    inverso_sustituciones = {}
-    for letra, opciones in sustituciones.items():
-        for sustituto in opciones:
-            inverso_sustituciones[sustituto] = letra
 
-    texto_descifrado = []
-    for char in texto_cifrado:
-        if char in inverso_sustituciones:
-            texto_descifrado.append(inverso_sustituciones[char])
-        else:
-            texto_descifrado.append(char)  # Dejar los caracteres no alfabéticos sin cambios
-    return ''.join(texto_descifrado)
+# Función de cifrado homofónico DES (aplicar cifrado DES y sustitución homofónica)
+def cifrado_homofonico_des(texto, clave):
+    # Primero aplicamos DES
+    texto_cifrado_des = cifrado_des(texto, clave)
+
+    # Después aplicamos la sustitución homofónica
+    texto_cifrado_final = sustitucion_homofonica(texto_cifrado_des)
+
+    return texto_cifrado_final
+
+
+# Función de descifrado (solo para un descifrado simple)
+def descifrado_des(texto_cifrado, clave):
+    # Eliminar la conversión hexadecimal
+    texto_cifrado_bytes = binascii.unhexlify(texto_cifrado)
+
+    # Crear el descifrador DES con la misma clave
+    cipher = DES.new(clave, DES.MODE_ECB)
+
+    # Descifrar el texto
+    texto_descifrado = cipher.decrypt(texto_cifrado_bytes)
+    return texto_descifrado.decode('utf-8').strip()  # Eliminar los espacios añadidos
+
 
 # Ejemplo de uso
+clave_des = get_random_bytes(8)  # Clave de 8 bytes (64 bits) para DES
 texto_original = "Hola Mundo"
-texto_cifrado = cifrar(texto_original)
-texto_descifrado = descifrar(texto_cifrado)
+
+# Cifrado por homofónica DES
+texto_cifrado = cifrado_homofonico_des(texto_original, clave_des)
+texto_descifrado = descifrado_des(texto_cifrado, clave_des)
 
 print("Texto Original:", texto_original)
 print("Texto Cifrado:", texto_cifrado)
 print("Texto Descifrado:", texto_descifrado)
+
